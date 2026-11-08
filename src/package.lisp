@@ -42,7 +42,7 @@
 
 (deftype gs2-list () '(and vector (not string)))
 ;;; Enable the whole comprolib feature set when loading as part of this system
-;;; (lib/comprolib.lisp is feature-gated; see lib/comprolib.lisp header).
+;;; (lib/comprolib/ is feature-gated; 00-package.lisp enables :cpl-all).
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (pushnew :cpl-all *features*))
 

@@ -86,12 +86,56 @@ $ cli/gs2cl.sh '7 ispr'
 1
 ```
 
+## Emacs integration (emacs/)
+
+`cpl-mode.el` — minor mode for writing solutions against comprolib:
+
+- **company completion**: scans the buffer's `(pushnew :cpl-XXX *features*)`
+  lines and offers only the functions of enabled features (disabled ones are
+  never compiled, so they would be false candidates)
+- **flycheck checker `cpl-sbcl`**: runs `cpl-check.lisp` (sbcl compile-file)
+  and surfaces diagnostics, including undefined-function from missing features
+- keybindings: `C-c C-c c` toggle feature list / `C-c C-c l` load library
+  into SLIME REPL / `C-c C-c k` run check
+
+`cpl-auto.lisp` — resolves which features a solution file actually needs.
+
+```elisp
+(add-to-list 'load-path "~/path/to/decisive/emacs/")
+(require 'cpl-mode)
+(add-hook 'lisp-mode-hook #'cpl-mode)
+```
+
 ## layout
 
 ```
 decisive.asd       system definition (:decisive; gs2.asd is a legacy alias)
-lib/
-  comprolib.lisp   the competitive-programming library (feature-gated)
+lib/comprolib/     the competitive-programming library, one file per feature
+  00-package.lisp  package + always-on macros (chmax/chmin); enables :cpl-all
+  10-math.lisp     extgcd pow-mod inv-mod prime-p factorize sieve crt floor-sum
+  20-combi.lisp    nCk mod p (O(n) precompute)
+  21-dsu.lisp      Union-Find
+  22-fenwick.lisp  Fenwick tree (BIT)
+  23-segtree.lisp  segtree
+  24-string.lisp   z-algorithm, rolling hash
+  30-graph.lisp    dijkstra LCA SCC BFS Floyd-Warshall
+  31-io.lisp       fast input readers
+  32-container.lisp queue/deque/ordered-set/multiset/heap wrappers
+  33-util.lisp     iota argmax/argmin RLE next-permutation
+  34-search.lisp   binary-search lower/upper-bound
+  35-cum.lisp      cumsum / cumsum2d
+  37-modint.lisp   define-modint
+  38-lazysegtree.lisp lazy segtree
+  39-convolution.lisp NTT convolution (+FFT via gsll)
+  40-flow.lisp     Dinic / min-cost flow
+  41-2sat.lisp     2-SAT
+  42-suffix.lisp   suffix array + LCP array
+  43-trie.lisp     trie
+emacs/
+  cpl-mode.el      minor mode: company completion filtered by active features,
+                   flycheck checker via cpl-check.lisp, keybindings
+  cpl-check.lisp   sbcl compile-file diagnostic backend for flycheck
+  cpl-auto.lisp    automatic dependency resolution for used symbols
 src/
   package.lisp     packages, conditions, value model
   values.lisp      to-gs/to-ps, show, py2 equality/compare/sort
