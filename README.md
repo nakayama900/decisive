@@ -1,4 +1,4 @@
-# gs2-cl
+# decisive
 
 Common Lisp port of [gs2](https://github.com/nooodl/gs2) (v0.2) — a
 golf-oriented stack language — including both the **interpreter** and the
