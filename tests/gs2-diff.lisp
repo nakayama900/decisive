@@ -9,7 +9,7 @@
 (push (make-pathname :name nil :type nil
                      :directory (butlast (pathname-directory *load-truename*)))
       asdf:*central-registry*)
-(asdf:load-system :gs2)
+(asdf:load-system :decisive)
 (in-package :gs2)
 
 (defun unescape-json-str (s)

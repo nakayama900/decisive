@@ -15,6 +15,6 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 exec sbcl --noinform --disable-debugger \
   --eval "(push (truename \"$DIR/../\") asdf:*central-registry*)" \
-  --eval '(asdf:load-system :gs2 :quiet t)' \
+  --eval '(asdf:load-system :decisive :quiet t)' \
   --eval "(gs2/cli:main (cdr sb-ext:*posix-argv*))" \
   --quit -- "$@"
