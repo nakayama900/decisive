@@ -452,7 +452,10 @@
        (let ((y (spop m)) (x (spop m)))
          (let ((r (case c0
                     (#x70 (< (gs2-cmp x y) 0))
-                    (#x71 (= (gs2-cmp x y) 0))
+                    ;; python2 `==` returns True for equal values even
+                    ;; across types; only *ordering* (< > <= >=) is a py2
+                    ;; type-name sort. So #x71 uses structural equality.
+                    (#x71 (if (gs2-equal x y) 1 0))
                     (#x72 (> (gs2-cmp x y) 0))
                     (#x73 (>= (gs2-cmp x y) 0))
                     (#x74 (/= (gs2-cmp x y) 0))

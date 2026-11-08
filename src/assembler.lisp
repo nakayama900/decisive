@@ -197,6 +197,9 @@
   (setf (gethash "'" *mnemonic-table*) #xe0)
   (setf (gethash "{" *mnemonic-table*) #x08)
   (setf (gethash "}" *mnemonic-table*) #x09)
+  ;; m: / f: are compile-pass markers (open a block, append 0x34/0x35
+  ;; after the next closing brace); the tokenizer implements them the same
+  ;; way gs2c does, so they keep their 0xfe/0xff markers here.
   (setf (gethash "m:" *mnemonic-table*) #xfe)
   (setf (gethash "f:" *mnemonic-table*) #xff))
 
