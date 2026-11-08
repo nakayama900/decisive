@@ -1,0 +1,8 @@
+*.fasl
+*.lx32fasl
+*.dfsl
+*.pfsl
+*.x86f
+*.fas
+~*
+.cache/
