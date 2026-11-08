@@ -154,6 +154,8 @@
         ((= c0 #x1d) (spush m 16))
         ((= c0 #x1e) (spush m 64))
         ((= c0 #x1f) (spush m 256))
+        ((= c0 #xc7)                                    ; comprolib alias call
+         (cpl-call m (char-code (char tok 1))))
         (t (op-dispatch m tok c0)))))
 
 (defun gs2-eval-tokens (m block)

@@ -18,7 +18,8 @@
            #:make-gs2 #:gs2-eval-tokens #:tokenize #:show #:to-gs #:to-ps
            #:gs2-block-p #:gs2-block-code #:%make-gs2-block
            #:gs2-num-p #:gs2-list-p #:gs2-stack #:gs2-junk
-           #:*gs2-divergences*))
+           #:*gs2-divergences*
+           #:cpl-alias-names #:cpl-lookup))
 (in-package :gs2)
 
 (declaim (optimize (speed 0) (safety 3) (debug 2)))
@@ -40,4 +41,9 @@
 (defun gs2-block-code (b) (slot-value b 'code))
 
 (deftype gs2-list () '(and vector (not string)))
+;;; Enable the whole comprolib feature set when loading as part of this system
+;;; (lib/comprolib.lisp is feature-gated; see lib/comprolib.lisp header).
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (pushnew :cpl-all *features*))
+
 

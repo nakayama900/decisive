@@ -250,10 +250,10 @@
                   (setf string-mode t)
                   (setf string-type
                         (cdr (assoc tok '(("(" . regular) ("w(" . array)
-                                         ("p(" . printf) ("m(" . regex-match)
-                                         ("s(" . regex-sub) ("f(" . regex-find)
-                                         ("v(" . regex-split))
-                              :test #'string=)))
+                                          ("p(" . printf) ("m(" . regex-match)
+                                          ("s(" . regex-sub) ("f(" . regex-find)
+                                          ("v(" . regex-split))
+                                      :test #'string=)))
                   (setf strings nil))
                  ((string= tok ")")
                   (setf string-mode nil)
@@ -289,17 +289,25 @@
                                                       inner
                                                       (string (code-char #x05))))))))
                         (t (push tok strings))))
-                 (t (let ((byte (or (gethash (string-downcase tok)
-                                             *mnemonic-table*)
-                                    (error 'gs2-error
-                                           :message
-                                           (format nil "unknown symbol: ~a"
-                                                   tok)))))
-                      (emit (string (code-char byte))))))))
+                 (t (let ((cpl (cpl-lookup (string-downcase tok))))
+                      (if cpl
+                          ;; comprolib alias: emit #xC7 followed by the id byte
+                          (emit (concatenate 'string
+                                             (string (code-char #xc7))
+                                             (string (code-char
+                                                      (gethash (string-downcase tok)
+                                                               *cpl-id-table*)))))
+                          (let ((byte (or (gethash (string-downcase tok)
+                                                   *mnemonic-table*)
+                                          (error 'gs2-error
+                                                 :message
+                                                 (format nil "unknown symbol: ~a"
+                                                         tok)))))
+                            (emit (string (code-char byte)))))))))
       (let ((str (coerce out 'string)))
         (if (and (> (length str) 0) (char= (char str 0) (code-char #x04)))
             (subseq str 1)
-            str))))
+            str)))))
 (defun split-by-char (s c)
   (let ((parts nil) (cur (make-string-output-stream)))
     (loop for x across s

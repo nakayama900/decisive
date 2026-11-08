@@ -40,6 +40,11 @@
                   (if (>= (+ i 1) n)
                       (progn (push (subseq prog i) tokens) (setf i n))
                       (progn (push (subseq prog i (+ i 2)) tokens) (setf i (+ i 2)))))
+                 ;; comprolib alias call: #xC7 followed by the id byte
+                 ((char= c (code-char #xc7))
+                  (if (>= (+ i 1) n)
+                      (progn (push (subseq prog i) tokens) (setf i n))
+                      (progn (push (subseq prog i (+ i 2)) tokens) (setf i (+ i 2)))))
                  (t (push (subseq prog i (1+ i)) tokens) (incf i)))))
     (nreverse tokens)))
 

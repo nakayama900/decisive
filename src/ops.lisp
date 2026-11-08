@@ -640,3 +640,91 @@
        (spush m (to-gs (show (aref (gs2-regs m) (logand c0 3))))))
       (t (error 'gs2-error :message (format nil "invalid token ~s" tok)))))
 
+
+
+;;; ---------------------------------------------------------------- comprobridge ops
+;;; #xC7 <id>: call a comprolib function by alias id (see comprobridge.lisp)
+
+(defun cpl-gs2->cl (x)
+  "gs2 value -> CL value for comprolib calls."
+  (cond ((gs2-num-p x) x)
+        ((gs2-list-p x)
+         (if (every (lambda (v) (typep v 'integer)) x)
+             (coerce x 'vector)
+             (coerce (map 'list #'cpl-gs2->cl x) 'vector)))
+        ((stringp x) x)
+        (t (error 'gs2-error :message "cpl: cannot convert value"))))
+
+(defun cpl-cl->gs2 (v)
+  "CL value -> gs2 value."
+  (typecase v
+    (integer v)
+    (boolean (if v 1 0))
+    (string (coerce v 'vector))
+    (list (if (and (consp (first v)) (integerp (car (first v))))
+              (coerce (loop for (p . e) in v append (list p e)) 'vector)
+              (coerce (map 'list #'cpl-cl->gs2 v) 'vector)))
+    (vector (coerce (map 'list #'cpl-cl->gs2 v) 'vector))
+    (cons (cpl-cl->gs2 (car v)))
+    (t (error 'gs2-error :message "cpl: cannot convert result"))))
+
+(defun cpl-block-fn (f)
+  "gs2 block value -> single-argument CL function (for argmax/argmin)."
+  (lambda (x)
+    (let ((m (make-gs2 "" "")))
+      (spush m x)
+      (gs2-eval-tokens m (gs2-block-code f))
+      (aref (gs2-stack m) 0))))
+
+(defun cpr-values->list (&rest vals)
+  "pack numeric values into a gs2 list (nils dropped)."
+  (coerce (map 'list #'cpl-cl->gs2 (remove-if-not #'numberp vals)) 'vector))
+
+(defun cpl-call (m id)
+  "dispatch op #xC7: call comprolib alias ID with args popped from the stack."
+  (ensure-cpl-alias-vector)
+  (let ((entry (and (>= id 0) (< id (length *cpl-alias-vector*))
+                    (aref *cpl-alias-vector* id))))
+    (unless entry
+      (error 'gs2-error :message (format nil "cpl: unknown id ~a" id)))
+    ;; entries are stored as vectors (see ensure-cpl-alias-vector)
+    (let* ((name (aref entry 0))
+           (nargs (aref entry 1))
+           (shape (aref entry 2))
+           (fn (aref entry 3)))
+      (declare (ignore name))
+      (let ((args (make-list nargs)))
+        (loop for i from (1- nargs) downto 0
+              do (setf (nth i args) (cpl-gs2->cl (spop m))))
+        (let ((result (apply fn args)))
+          (spush m
+                 (case shape
+                   (:handle (let ((h *cpl-next-handle*))
+                              (incf *cpl-next-handle*)
+                              (setf (gethash h *cpl-objects*) result)
+                              h))
+                   (:values (multiple-value-bind (a b c) result
+                              (cpr-values->list a b c)))
+                   (:first-of-values (multiple-value-bind (a b c) result
+                                       (declare (ignore b c))
+                                       (cpl-cl->gs2 a)))
+                   (:values-or-nil (multiple-value-bind (a b) result
+                                     (if a (coerce (list a b) 'vector) (vector))))
+                   ;; :int, :bool, :int-list, :alist, :raw, ... -> plain convert
+                   (otherwise (cpl-cl->gs2 result)))))))))
+
+(defvar *cpl-alias-vector* nil)
+(defvar *cpl-alias-vector-built* nil)
+
+(defun ensure-cpl-alias-vector ()
+  ;; built lazily: ops.lisp loads before comprobridge.lisp defines
+  ;; *cpl-aliases*, so the vector cannot be constructed at load time.
+  (unless *cpl-alias-vector-built*
+    (setf *cpl-alias-vector*
+          (coerce (mapcar (lambda (e) (coerce e 'vector)) *cpl-aliases*) 'vector)
+          *cpl-alias-vector-built* t)))
+
+(defun cpl-call-op (m id-byte)
+  "op #xC7: ID-BYTE is the byte immediately after #xC7 in the program."
+  (ensure-cpl-alias-vector)
+  (cpl-call m (char-code id-byte)))

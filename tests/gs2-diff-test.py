@@ -36,9 +36,11 @@ def run_lisp_batch(cases):
                        timeout=600, cwd=WORKDIR, env=env)
     out = {}
     for line in p.stdout.decode("latin-1").splitlines():
-        line = line.strip()
-        if line.startswith('{"id"'):
-            d = json.loads(line)
+        # sbclrc noise can be concatenated onto the same line as JSON output;
+        # find the JSON object start anywhere in the line
+        idx = line.find('{"id"')
+        if idx >= 0:
+            d = json.loads(line[idx:])
             out[d["id"]] = d["out"].encode("latin-1")
     if not out:
         sys.stderr.write("LISP BATCH FAILED:\n" + p.stdout.decode("latin-1", "replace")[-2000:] +

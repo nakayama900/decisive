@@ -1,26 +1,23 @@
 (in-package :gs2)
 
 ;;; ---------------------------------------------------------------- primes
+;;; prime helpers now built on comprolib (:cpl-math) — sieve / prime-p /
+;;; factorize are shared with the competitive-programming library instead of
+;;; being duplicated here.
 
 (defvar *prime-list* nil)
 (defvar *sieved* 2)
-(defvar *composite* (make-hash-table))
-(setf (gethash 1 *composite*) t)
 
 (defun sieve (limit)
+  ;; keep the gs2-side incremental prime list backed by comprolib:sieve
   (when (<= limit *sieved*) (return-from sieve))
-  (setf *prime-list* nil)
-  (loop for i from 2 below limit
-        unless (gethash i *composite*)
-          do (loop for j from (* i i) below limit by i
-                   do (setf (gethash j *composite*) t))
-             (push i *prime-list*))
-  (setf *prime-list* (nreverse *prime-list*))
+  (setf *prime-list* (comprolib:sieve limit))
   (setf *sieved* limit))
 
 (sieve 1000)
 
-(defun is-prime* (n) (sieve (+ n 1)) (not (gethash n *composite*)))
+(defun is-prime* (n)
+  (comprolib:prime-p n))
 
 (defun nth-prime (n)
   (sieve (+ (truncate (* (log (max n 1)) n)) 100))
@@ -39,34 +36,21 @@
         when (is-prime* i) return i))
 
 (defun totient (n)
-  (loop for i from 1 to n
-        count (= (py-gcd n i) 1)))
+  ;; via factorization: phi = n * prod (1 - 1/p)
+  (if (= n 1)
+      1
+      (let ((fs (comprolib:factorize n)))
+        (* n (reduce #'* (mapcar (lambda (f) (- 1 (/ (car f) (cdr f)))) fs))))))
 
 (defun factor-num (n exps)
-  (loop with p = 2 with res = nil
-        while (> n 1)
-        do (loop while (zerop (mod n p))
-                 do (push p res) (setf n (truncate n p)))
-           (setf p (next-prime p))
-        finally (let ((fs (nreverse res)))
-                  (return
-                    (if exps
-                        (let (out (cur nil) (cnt 0))
-                          (loop for f in fs
-                                do (if (and cur (= f cur)) (incf cnt)
-                                       (progn (when cur
-                                                (push (vector cur cnt) out))
-                                              (setf cur f cnt 1)))
-                                finally (push (vector cur cnt) out))
-                          (coerce (nreverse out) 'vector))
-                        (coerce fs 'vector))))))
-
-(defun factor-list (n)
-  ;; n is list of [b e] pairs, or flat [b0 e0 b1 e1 ...]
-  (let ((pairs
-          (if (and (> (length n) 0) (gs2-num-p (aref n 0)))
-              (loop for i from 0 below (length n) by 2
-                    collect (cons (aref n i) (aref n (1+ i))))
-              (loop for x across n collect (cons (aref x 0) (aref x 1))))))
-    (reduce #'* (mapcar (lambda (pair) (expt (car pair) (cdr pair))) pairs))))
-
+  ;; factorize n using comprolib:factorize, then group into [p e] pairs
+  ;; or a flat [p0 e0 p1 e1 ...] vector depending on EXPS
+  (let* ((fs (comprolib:factorize n))          ; alist (p . e)
+         (pairs (map 'vector (lambda (f) (vector (car f) (cdr f))) fs)))
+    (if exps
+        (let ((out (make-push-array)))
+          (loop for p across pairs
+                do (vector-push-extend (aref p 0) out)
+                   (vector-push-extend (aref p 1) out))
+          out)
+        pairs)))
